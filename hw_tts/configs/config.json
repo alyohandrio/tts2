@@ -1,0 +1,89 @@
+{
+  "name": "one_batch_test",
+  "n_gpu": 1,
+  "arch": {
+    "generator": {
+        "type": "BaselineModel",
+        "args": {
+          "n_feats": 128,
+          "fc_hidden": 512
+        }
+    },
+    "msd": {
+        "type": "MSD",
+	"args": {
+          "sf": 8
+	}
+    }
+    "mpd": {
+        "type": "MPD",
+	"args": {
+          "sf": 8
+	}
+    }
+  },
+  "data": {
+    "train": {
+      "batch_size": 2,
+      "num_workers": 2,
+      "datasets": [
+        {
+          "type": "LJDataset",
+          "args": {
+            "path": "data/s"
+          }
+        }
+      ]
+    },
+    "val": {
+      "batch_size": 10,
+      "num_workers": 0,
+      "datasets": [
+      ]
+    }
+  },
+  "optimizer": {
+    "type": "SGD",
+    "args": {
+      "lr": 1e-2
+    }
+  },
+  "loss": {
+    "type": "CTCLoss",
+    "args": {}
+  },
+  "metrics": [
+  ],
+  "lr_scheduler_g": {
+    "type": "OneCycleLR",
+    "args": {
+      "steps_per_epoch": 100,
+      "epochs": 50,
+      "anneal_strategy": "cos",
+      "max_lr": 1e-2,
+      "pct_start": 0.2
+    }
+  },
+  "lr_scheduler_d": {
+    "type": "OneCycleLR",
+    "args": {
+      "steps_per_epoch": 100,
+      "epochs": 50,
+      "anneal_strategy": "cos",
+      "max_lr": 1e-2,
+      "pct_start": 0.2
+    }
+  },
+  "trainer": {
+    "epochs": 50,
+    "save_dir": "saved/",
+    "save_period": 5,
+    "verbosity": 2,
+    "monitor": "min val_loss",
+    "early_stop": 100,
+    "visualize": "wandb",
+    "wandb_project": "tts_project",
+    "len_epoch": 100,
+    "grad_norm_clip": 10
+  }
+}

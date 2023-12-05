@@ -55,10 +55,10 @@ class Trainer(BaseTrainer):
         self.log_step = 50
 
         self.train_metrics = MetricTracker(
-            "loss", "grad norm", *[m.name for m in self.metrics], writer=self.writer
+            "discriminator_loss", "generator_loss", "mel_loss", "fm_loss", "generator grad norm", "msd grad norm", "mpd grad norm", *[m.name for m in self.metrics], writer=self.writer
         )
         self.evaluation_metrics = MetricTracker(
-            "loss", *[m.name for m in self.metrics], writer=self.writer
+            "discriminator_loss", "generator_loss", "mel_loss", "fm_loss", *[m.name for m in self.metrics], writer=self.writer
         )
 
         self.transform = MelSpectrogram(MelSpectrogramConfig())
@@ -117,12 +117,29 @@ class Trainer(BaseTrainer):
                     continue
                 else:
                     raise e
-            self.train_metrics.update("grad norm", self.get_grad_norm())
+            self.train_metrics.update("generator grad norm", self.get_grad_norm("generator"))
+            self.train_metrics.update("msd grad norm", self.get_grad_norm("msd"))
+            self.train_metrics.update("mpd grad norm", self.get_grad_norm("mpd"))
             if batch_idx % self.log_step == 0:
                 self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)
                 self.logger.debug(
-                    "Train Epoch: {} {} Loss: {:.6f}".format(
-                        epoch, self._progress(batch_idx), batch["loss"].item()
+                    "Train Epoch: {} {} Generator Loss: {:.6f}".format(
+                        epoch, self._progress(batch_idx), batch["generator_loss"].item()
+                    )
+                )
+                self.logger.debug(
+                    "Train Epoch: {} {} Discriminator Loss: {:.6f}".format(
+                        epoch, self._progress(batch_idx), batch["discriminator_loss"].item()
+                    )
+                )
+                self.logger.debug(
+                    "Train Epoch: {} {} Mel Loss: {:.6f}".format(
+                        epoch, self._progress(batch_idx), batch["mel_loss"].item()
+                    )
+                )
+                self.logger.debug(
+                    "Train Epoch: {} {} Feature matching Loss: {:.6f}".format(
+                        epoch, self._progress(batch_idx), batch["fm_loss"].item()
                     )
                 )
                 self.writer.add_scalar(
@@ -131,7 +148,7 @@ class Trainer(BaseTrainer):
                 self.writer.add_scalar(
                     "discriminator learning rate", self.lr_scheduler_d.get_last_lr()[0]
                 )
-                self._log_audio(batch["generated_audio"])
+                self.writer.add_audio("audio sample", batch["generated_audio"][0], 22050)
                 self._log_scalars(self.train_metrics)
                 # we don't want to reset train metrics at the start of every epoch
                 # because we are interested in recent train metrics
@@ -165,7 +182,7 @@ class Trainer(BaseTrainer):
 
         batch["generated_spectrogram"] = generated_mels[:,:,:-1]
         if is_train:
-            self.optim_d.zero_grad()
+            self.optimizer_d.zero_grad()
 
         xs_d, xs_real_d, fms_d, fms_real_d = self.mpd(**batch, detach=True)
         xs_s, xs_real_s, fms_s, fms_real_s = self.msd(**batch, detach=True)
@@ -181,8 +198,8 @@ class Trainer(BaseTrainer):
 
 
         if is_train:
-            self.optim_g.zero_grad()
-        mel_loss = self.criterion["mel"](mels, generated_mels)
+            self.optimizer_g.zero_grad()
+        mel_loss = self.criterion["mel"](batch["spectrogram"], batch["generated_spectrogram"])
         batch["mel_loss"] = mel_loss
 
         xs_d, xs_real_d, fms_d, fms_real_d = self.mpd(**batch)
@@ -248,8 +265,13 @@ class Trainer(BaseTrainer):
 
 
     @torch.no_grad()
-    def get_grad_norm(self, norm_type=2):
-        parameters = self.model.parameters()
+    def get_grad_norm(self, model_type, norm_type=2):
+        if model_type == "generator":
+            parameters = self.generator.parameters()
+        elif model_type == "msd":
+            parameters = self.msd.parameters()
+        elif model_type == "mpd":
+            parameters = self.mpd.parameters()
         if isinstance(parameters, torch.Tensor):
             parameters = [parameters]
         parameters = [p for p in parameters if p.grad is not None]

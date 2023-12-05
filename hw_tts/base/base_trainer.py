@@ -22,8 +22,8 @@ class BaseTrainer:
         self.mpd = mpd
         self.criterion = criterion
         self.metrics = metrics
-        self.optim_d = optimizer_d
-        self.optim_g = optimizer_g
+        self.optimizer_d = optimizer_d
+        self.optimizer_g = optimizer_g
 
         # for interrupt saving
         self._last_epoch = 0
@@ -147,7 +147,7 @@ class BaseTrainer:
             "msd_arch": msd_arch,
             "mpd_arch": mpd_arch,
             "epoch": epoch,
-            "generator_state_dict": self.model.state_dict(),
+            "generator_state_dict": self.generator.state_dict(),
             "msd_state_dict": self.msd.state_dict(),
             "mpd_state_dict": self.mpd.state_dict(),
             "optimizer_g": self.optimizer_g.state_dict(),

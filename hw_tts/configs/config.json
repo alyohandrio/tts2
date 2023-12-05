@@ -1,5 +1,5 @@
 {
-  "name": "one_batch_test",
+  "name": "basic_train",
   "n_gpu": 1,
   "arch": {
     "generator": {
@@ -77,23 +77,15 @@
   "metrics": [
   ],
   "lr_scheduler_g": {
-    "type": "OneCycleLR",
+    "type": "ExponentialLR",
     "args": {
-      "steps_per_epoch": 100,
-      "epochs": 50,
-      "anneal_strategy": "cos",
-      "max_lr": 1e-2,
-      "pct_start": 0.2
+      "gamma": 0.999
     }
   },
   "lr_scheduler_d": {
     "type": "OneCycleLR",
     "args": {
-      "steps_per_epoch": 100,
-      "epochs": 50,
-      "anneal_strategy": "cos",
-      "max_lr": 1e-2,
-      "pct_start": 0.2
+      "gamma": 0.999
     }
   },
   "trainer": {

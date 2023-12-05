@@ -167,8 +167,8 @@ class Trainer(BaseTrainer):
         if is_train:
             self.optim_d.zero_grad()
 
-        xs_d, xs_real_d, fms_d, fms_real_d = mpd(**batch, detach=True)
-        xs_s, xs_real_s, fms_s, fms_real_s = msd(**batch, detach=True)
+        xs_d, xs_real_d, fms_d, fms_real_d = self.mpd(**batch, detach=True)
+        xs_s, xs_real_s, fms_s, fms_real_s = self.msd(**batch, detach=True)
         d_loss = self.criterion["discriminator"](xs_real_s, xs_s) + self.criterion["discriminator"](xs_real_d, xs_d)
         batch["discriminator_loss"] = d_loss
         if is_train:
@@ -185,12 +185,12 @@ class Trainer(BaseTrainer):
         mel_loss = self.criterion["mel"](mels, generated_mels)
         batch["mel_loss"] = mel_loss
 
-        xs_d, xs_real_d, fms_d, fms_real_d = mpd(**batch)
-        xs_s, xs_real_s, fms_s, fms_real_s = msd(**batch)
+        xs_d, xs_real_d, fms_d, fms_real_d = self.mpd(**batch)
+        xs_s, xs_real_s, fms_s, fms_real_s = self.msd(**batch)
 
-        fm_loss = FMLoss()(fms_real_d, fms_d) + FMLoss()(fms_real_s, fms_s)
+        fm_loss = self.criterion["fm"](fms_real_d, fms_d) + self.criterion["fm"](fms_real_s, fms_s)
         batch["fm_loss"] = fm_loss
-        g_loss = GeneratorLoss()(xs_d) + GeneratorLoss()(xs_s)
+        g_loss = self.criterion["generator"](xs_d) + self.criterion["generator"](xs_s)
         batch["generator_loss"] = g_loss
         if is_train:
             loss = batch["mel_loss"] + batch["fm_loss"] + batch["generator_loss"]

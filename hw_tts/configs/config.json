@@ -3,22 +3,26 @@
   "n_gpu": 1,
   "arch": {
     "generator": {
-        "type": "BaselineModel",
+        "type": "Generator",
         "args": {
-          "n_feats": 128,
-          "fc_hidden": 512
+          "ku": [16, 16, 8],
+          "hu": 256,
+	  "kr": [3, 5, 7],
+	  "Dr": [[[1], [2]], [[2], [6]], [[3], [12]]],
+	  "alpha": 0.1
         }
     },
     "msd": {
         "type": "MSD",
 	"args": {
-          "sf": 8
+          "alpha": 0.1
 	}
-    }
+    },
     "mpd": {
         "type": "MPD",
 	"args": {
-          "sf": 8
+          "alpha": 0.1,
+	  "ps": [2, 3, 5, 7, 11]
 	}
     }
   },
@@ -28,29 +32,47 @@
       "num_workers": 2,
       "datasets": [
         {
-          "type": "LJDataset",
+          "type": "LJSpeechDataset",
           "args": {
-            "path": "data/s"
+            "path": "../tts1/data/LJSpeech-1.1/wavs"
           }
         }
       ]
-    },
-    "val": {
-      "batch_size": 10,
-      "num_workers": 0,
-      "datasets": [
-      ]
     }
   },
-  "optimizer": {
-    "type": "SGD",
+  "optimizer_g": {
+    "type": "AdamW",
     "args": {
-      "lr": 1e-2
+      "lr": 1e-2,
+      "betas": [0.8, 0.99],
+      "weight_decay": 1e-2
+    }
+  },
+  "optimizer_d": {
+    "type": "AdamW",
+    "args": {
+      "lr": 1e-2,
+      "betas": [0.8, 0.99],
+      "weight_decay": 1e-2
     }
   },
   "loss": {
-    "type": "CTCLoss",
-    "args": {}
+    "generator": {
+      "type": "GeneratorLoss",
+      "args": {}
+    },
+    "discriminator": {
+      "type": "DiscriminatorLoss",
+      "args": {}
+    },
+    "mel": {
+      "type": "MelLoss",
+      "args": {}
+    },
+    "fm": {
+      "type": "FMLoss",
+      "args": {}
+    }
   },
   "metrics": [
   ],

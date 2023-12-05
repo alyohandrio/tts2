@@ -3,30 +3,21 @@ from operator import xor
 from torch.utils.data import ConcatDataset, DataLoader
 
 import hw_tts.dataset
-from hw_tts import batch_sampler as batch_sampler_module
 from hw_tts.collate_fn.collate import collate_fn
 from hw_tts.utils.parse_config import ConfigParser
 
 
-def get_dataloaders(configs: ConfigParser, text_encoder: BaseTextEncoder):
+def get_dataloaders(configs: ConfigParser):
     dataloaders = {}
     for split, params in configs["data"].items():
         num_workers = params.get("num_workers", 1)
 
-        # set train augmentations
-        if split == 'train':
-            wave_augs, spec_augs = None, None
-            drop_last = True
-        else:
-            wave_augs, spec_augs = None, None
-            drop_last = False
 
         # create and join datasets
         datasets = []
         for ds in params["datasets"]:
             datasets.append(configs.init_obj(
-                ds, hw_tts.dataset, text_encoder=text_encoder, config_parser=configs,
-                wave_augs=wave_augs, spec_augs=spec_augs))
+                ds, hw_tts.dataset, config_parser=configs))
         assert len(datasets)
         if len(datasets) > 1:
             dataset = ConcatDataset(datasets)
@@ -50,6 +41,11 @@ def get_dataloaders(configs: ConfigParser, text_encoder: BaseTextEncoder):
         # Fun fact. An hour of debugging was wasted to write this line
         assert bs <= len(dataset), \
             f"Batch size ({bs}) shouldn't be larger than dataset length ({len(dataset)})"
+
+        if "drop_last" in params:
+            drop_last = params["drop_last"]
+        else:
+            drop_last = False
 
         # create dataloader
         dataloader = DataLoader(

@@ -1,3 +1,4 @@
+import itertools
 import argparse
 import collections
 import warnings
@@ -38,14 +39,18 @@ def main(config):
 
     # prepare for (multi-device) GPU training
     device, device_ids = prepare_device(config["n_gpu"])
-    model = model.to(device)
+    generator = generator.to(device)
+    msd = msd.to(device)
+    mpd = mpd.to(device)
     if len(device_ids) > 1:
         generator = torch.nn.DataParallel(generator, device_ids=device_ids)
         msd = torch.nn.DataParallel(msd, device_ids=device_ids)
         mpd = torch.nn.DataParallel(mpd, device_ids=device_ids)
 
     # get function handles of loss and metrics
-    loss_module = config.init_obj(config["loss"], module_loss).to(device)
+    loss_module = {}
+    for key, value in config["loss"].items():
+        loss_module[key] = config.init_obj(value, module_loss).to(device)
     metrics = [
         config.init_obj(metric_dict, module_metric, text_encoder=text_encoder)
         for metric_dict in config["metrics"]
@@ -54,12 +59,12 @@ def main(config):
     # build optimizer, learning rate scheduler. delete every line containing lr_scheduler for
     # disabling scheduler
     trainable_params = filter(lambda p: p.requires_grad, generator.parameters())
-    optimizer = config.init_obj(config["optimizer"], torch.optim, trainable_params)
-    lr_scheduler = config.init_obj(config["lr_scheduler"], torch.optim.lr_scheduler, optimizer)
+    optimizer_g = config.init_obj(config["optimizer_g"], torch.optim, trainable_params)
+    lr_scheduler_g = config.init_obj(config["lr_scheduler_g"], torch.optim.lr_scheduler, optimizer_g)
 
     trainable_params = itertools.chain(filter(lambda p: p.requires_grad, msd.parameters()), filter(lambda p: p.requires_grad, mpd.parameters()))
-    optimizer_d = config.init_obj(config["optimizer"], torch.optim, trainable_params)
-    lr_scheduler_d = config.init_obj(config["lr_scheduler"], torch.optim.lr_scheduler, optimizer)
+    optimizer_d = config.init_obj(config["optimizer_d"], torch.optim, trainable_params)
+    lr_scheduler_d = config.init_obj(config["lr_scheduler_d"], torch.optim.lr_scheduler, optimizer_d)
 
     trainer = Trainer(
         generator,

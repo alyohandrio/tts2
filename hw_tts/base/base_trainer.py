@@ -22,8 +22,8 @@ class BaseTrainer:
         self.mpd = mpd
         self.criterion = criterion
         self.metrics = metrics
-        self.optimizer_d = optimizer_d
-        self.optimizer_g = optimizer_g
+        self.optim_d = optimizer_d
+        self.optim_g = optimizer_g
 
         # for interrupt saving
         self._last_epoch = 0
